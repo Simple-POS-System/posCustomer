@@ -26,6 +26,7 @@ public class Customer {
     private OrderStatus orderStatus;
 
     public enum OrderStatus {
+        IN_QUEUE,
         PACKING,
         READY_TO_DISPATCH,
         SHIPPED,
