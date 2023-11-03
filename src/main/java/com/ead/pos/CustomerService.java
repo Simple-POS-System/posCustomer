@@ -3,6 +3,7 @@ import com.ead.pos.Exceptions.UserAlreadyExistsException;
 import com.ead.pos.Exceptions.UserNotFoundException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.aspectj.weaver.ast.Or;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -10,6 +11,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class CustomerService {
@@ -214,6 +216,51 @@ public class CustomerService {
                 return ResponseEntity.ok("Order status updated successfully");
             }
             return ResponseEntity.badRequest().body("Invalid order status");
+        }catch (UserNotFoundException e){
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }catch (Exception e){
+            return ResponseEntity.badRequest().body(null);
+        }
+    }
+
+    public ResponseEntity<?> placeOrder(String userId){
+        try {
+            Customer customer = customerRepository.findById(userId)
+                    .orElseThrow(() -> new UserNotFoundException("User not found with id: " + userId));
+            List<CartItem> currentCartItems = customer.getCartItems();
+            if (currentCartItems == null) {
+                return ResponseEntity.badRequest().body("Cart is empty");
+            }
+            for (CartItem item : currentCartItems) {
+                String productId = item.getProductId();
+                String productUrl = "http://localhost:8070/product/checkAvailability/" + productId + "/" + item.getQuantity();
+                ResponseEntity<Integer> productResponse = restTemplate.getForEntity(productUrl, Integer.class);
+                if (productResponse.getStatusCode().is2xxSuccessful()) {
+                    if (productResponse.getBody() == null) {
+                        return ResponseEntity.badRequest().body("Product not found with id: " + productId);
+                    }
+                    if(productResponse.getBody() == 0){
+                        removeCartItem(userId,productId);
+                        return ResponseEntity.badRequest().body("Product "+item.getProductId()+" quantity is not enough. Please try again");
+                    }
+                } else {
+                    return ResponseEntity.badRequest().body("Error fetching product details");
+                }
+            }
+            for(CartItem item: currentCartItems){
+                String productId = item.getProductId();
+                String productUrl = "http://localhost:8070/product/updateQuantity/" + productId + "/" + item.getQuantity();
+                restTemplate.put(productUrl,null);
+            }
+            Order order = new Order();
+            order.setCustomerId(userId);
+            order.setOrderItems(currentCartItems);
+            String orderUrl = "http://localhost:8060/order/add";
+            ResponseEntity<Order> savedOrder = restTemplate.postForEntity(orderUrl,order,Order.class);
+            System.out.println("Order ID: " + Objects.requireNonNull(savedOrder.getBody()).getOrderId());
+            customer.getActiveOrders().add(Objects.requireNonNull(savedOrder.getBody()).getOrderId());
+            customer.setOrderStatus(Customer.OrderStatus.IN_QUEUE);
+            return ResponseEntity.ok("Order placed successfully");
         }catch (UserNotFoundException e){
             return ResponseEntity.badRequest().body(e.getMessage());
         }catch (Exception e){

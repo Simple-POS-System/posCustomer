@@ -78,6 +78,12 @@ public class CustomerController {
         return customerService.setOrderStatus(userId,orderStatus);
     }
 
+    @PostMapping("/placeOrder/{userId}")
+    public ResponseEntity<?> placeOrder(@PathVariable String userId){
+        return customerService.placeOrder(userId);
+    }
+
+
     @DeleteMapping("/deleteCart/{userId}")
     public ResponseEntity<?> deleteCart(@PathVariable String userId){
         return customerService.clearCart(userId);
