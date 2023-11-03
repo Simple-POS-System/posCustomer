@@ -131,24 +131,43 @@ public class CustomerService {
     }
 
     public ResponseEntity<?> userCartUpdate(CartItem cartItem, String userId) {
-        Customer customer = customerRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException("User not found with id: " + userId));
-        List<CartItem> cartItems = customer.getCartItems();
-        if (cartItems != null) {
-            boolean isItemPresent = false;
-            for (CartItem item : cartItems) {
-                if (item.getProductId().equals(cartItem.getProductId())) {
-                    item.setQuantity(cartItem.getQuantity());
-                    isItemPresent = true;
-                    break;
+        try {
+            Customer customer = customerRepository.findById(userId)
+                    .orElseThrow(() -> new UserNotFoundException("User not found with id: " + userId));
+            String productId = cartItem.getProductId();
+            String productUrl = "http://localhost:8070/product/getById/" + productId;
+            ResponseEntity<String> productResponse = restTemplate.getForEntity(productUrl, String.class);
+            if (productResponse.getStatusCode().is2xxSuccessful()) {
+                if (productResponse.getBody() == null) {
+                    return ResponseEntity.badRequest().body("Product not found with id: " + productId);
                 }
+                ObjectMapper objectMapper = new ObjectMapper();
+                Product productDetails = objectMapper.readValue(productResponse.getBody(), Product.class);
+                if(productDetails.getQuantity() < cartItem.getQuantity()){
+                    return ResponseEntity.badRequest().body("Product quantity is not enough");
+                }
+                List<CartItem> currentCartItems = customer.getCartItems();
+                if (currentCartItems == null) {
+                    return ResponseEntity.badRequest().body("Cart is empty");
+                }
+                for (CartItem item : currentCartItems) {
+                    if (item.getProductId().equals(cartItem.getProductId())) {
+                        customer.setTotalCost(customer.getTotalCost() - (productDetails.getUnitPrice() * item.getQuantity()));
+                        item.setQuantity(cartItem.getQuantity());
+                        customer.setTotalCost(customer.getTotalCost() + (productDetails.getUnitPrice() * cartItem.getQuantity()));
+                        customerRepository.save(customer);
+                        return ResponseEntity.ok("Cart item updated successfully");
+                    }
+                }
+                return ResponseEntity.badRequest().body("Cart item not found");
+            } else {
+                return ResponseEntity.badRequest().body("Error fetching product details");
             }
-            if (!isItemPresent) {
-                throw new ProductNotFoundException("Product not found with id: " + cartItem.getProductId());
-            }
+        } catch (UserNotFoundException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
         }
-        customerRepository.save(customer);
-        return ResponseEntity.ok(customer.getCartItems());
     }
 
     public ResponseEntity<?> getOrderStatus(String userId) {
