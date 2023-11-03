@@ -62,6 +62,12 @@ public class CustomerController {
         }
     }
 
+    @PutMapping("/deleteCartItem/{userId}/{productId}")
+    public ResponseEntity<?> deleteCartItem(@PathVariable String userId,@PathVariable String productId){
+        return customerService.removeCartItem(userId,productId);
+    }
+
+
     @GetMapping("/getOrderStatus/{userId}")
     public ResponseEntity<?> getOrderStatus(@PathVariable String userId){
         return customerService.getOrderStatus(userId);

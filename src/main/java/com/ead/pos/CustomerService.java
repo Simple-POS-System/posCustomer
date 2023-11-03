@@ -116,6 +116,7 @@ public class CustomerService {
                     currentCartItems = new ArrayList<>();
                     customer.setCartItems(currentCartItems);
                 }
+                cartItem.setUnitPrice(productDetails.getUnitPrice());
                 currentCartItems.add(cartItem);
                 customer.setTotalCost(customer.getTotalCost() + (productDetails.getUnitPrice() * cartItem.getQuantity()));
                 customerRepository.save(customer);
@@ -167,6 +168,28 @@ public class CustomerService {
             return ResponseEntity.badRequest().body(e.getMessage());
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    public ResponseEntity<?> removeCartItem (String userId, String productId){
+        try {
+            Customer customer = customerRepository.findById(userId)
+                    .orElseThrow(() -> new UserNotFoundException("User not found with id: " + userId));
+            List<CartItem> currentCartItems = customer.getCartItems();
+            if (currentCartItems == null) {
+                return ResponseEntity.badRequest().body("Cart is empty");
+            }
+            for (CartItem item : currentCartItems) {
+                if (item.getProductId().equals(productId)) {
+                    customer.setTotalCost(customer.getTotalCost() - (item.getUnitPrice() * item.getQuantity()));
+                    currentCartItems.remove(item);
+                    customerRepository.save(customer);
+                    return ResponseEntity.ok("Cart item removed successfully");
+                }
+            }
+            return ResponseEntity.badRequest().body("Cart item not found");
+        }catch (UserNotFoundException e){
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 

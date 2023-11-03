@@ -3,8 +3,8 @@ package com.ead.pos;
 import lombok.Getter;
 import lombok.Setter;
 
-@Getter
 @Setter
+@Getter
 public class Product {
     private String productId;
     private String productName;
@@ -12,3 +12,4 @@ public class Product {
     private int unitPrice;
 
 }
+
