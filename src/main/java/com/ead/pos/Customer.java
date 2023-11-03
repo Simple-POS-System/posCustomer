@@ -29,7 +29,8 @@ public class Customer {
         PACKING,
         READY_TO_DISPATCH,
         SHIPPED,
-        DELIVERED
+        DELIVERED,
+        NOT_APPLICABLE
     }
 
     @Override

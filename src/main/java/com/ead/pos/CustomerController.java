@@ -40,7 +40,7 @@ public class CustomerController {
 
     @DeleteMapping("/deleteById/{userId}")
     public ResponseEntity<String> deleteCustomerById(@PathVariable String userId) {
-        return customerService.deteleCustomerById(userId);
+        return customerService.deleteCustomerById(userId);
     }
 
     @GetMapping("/getCart/{userId}")
@@ -71,6 +71,11 @@ public class CustomerController {
     @GetMapping("/getOrderStatus/{userId}")
     public ResponseEntity<?> getOrderStatus(@PathVariable String userId){
         return customerService.getOrderStatus(userId);
+    }
+
+    @PostMapping("/setOrderStatus/{userId}/{orderStatus}")
+    public ResponseEntity<?> setOrderStatus(@PathVariable String userId,@PathVariable String orderStatus){
+        return customerService.setOrderStatus(userId,orderStatus);
     }
 
     @DeleteMapping("/deleteCart/{userId}")

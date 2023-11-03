@@ -1,9 +1,7 @@
 package com.ead.pos;
-import com.ead.pos.Exceptions.ProductNotFoundException;
 import com.ead.pos.Exceptions.UserAlreadyExistsException;
 import com.ead.pos.Exceptions.UserNotFoundException;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -40,6 +38,7 @@ public class CustomerService {
                 throw new UserAlreadyExistsException("Customer with email: " + customer.getEmail() + " is already exist");
             }
             customer.setUserId(generateUserId());
+            customer.setOrderStatus(Customer.OrderStatus.NOT_APPLICABLE);
             customerRepository.save(customer);
             return ResponseEntity.ok("Customer saved successfully");
         } catch (UserAlreadyExistsException e) {
@@ -71,7 +70,7 @@ public class CustomerService {
                 .orElseThrow(() -> new UserNotFoundException("User not found with id: " + userId));
     }
 
-    public ResponseEntity<String> deteleCustomerById(String userId) {
+    public ResponseEntity<String> deleteCustomerById(String userId) {
         try {
             Customer customer = customerRepository.findById(userId)
                     .orElseThrow(() -> new UserNotFoundException("User not found with id: " + userId));
@@ -198,6 +197,23 @@ public class CustomerService {
             Customer customer = customerRepository.findById(userId)
                     .orElseThrow(() -> new UserNotFoundException("User not found with id: " + userId));
             return ResponseEntity.ok(customer.getOrderStatus().toString());
+        }catch (UserNotFoundException e){
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }catch (Exception e){
+            return ResponseEntity.badRequest().body(null);
+        }
+    }
+
+    public ResponseEntity<?> setOrderStatus (String userId, String status){
+        try {
+            Customer customer = customerRepository.findById(userId)
+                    .orElseThrow(() -> new UserNotFoundException("User not found with id: " + userId));
+            if(status.equals("PACKING") || status.equals("READY_TO_DISPATCH") || status.equals("SHIPPED") || status.equals("DELIVERED") || status.equals("NOT_APPLICABLE")){
+                customer.setOrderStatus(Customer.OrderStatus.valueOf(status));
+                customerRepository.save(customer);
+                return ResponseEntity.ok("Order status updated successfully");
+            }
+            return ResponseEntity.badRequest().body("Invalid order status");
         }catch (UserNotFoundException e){
             return ResponseEntity.badRequest().body(e.getMessage());
         }catch (Exception e){
