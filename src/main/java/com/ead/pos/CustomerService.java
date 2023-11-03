@@ -2,9 +2,13 @@ package com.ead.pos;
 import com.ead.pos.Exceptions.ProductNotFoundException;
 import com.ead.pos.Exceptions.UserAlreadyExistsException;
 import com.ead.pos.Exceptions.UserNotFoundException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,6 +18,9 @@ public class CustomerService {
 
     @Autowired
     private CustomerRepository customerRepository;
+
+    RestTemplate restTemplate = new RestTemplate();
+
 
     public String generateUserId() {
         Customer lastCustomer = customerRepository.findFirstByOrderByUserIdDesc();
@@ -92,17 +99,34 @@ public class CustomerService {
         try {
             Customer customer = customerRepository.findById(userId)
                     .orElseThrow(() -> new UserNotFoundException("User not found with id: " + userId));
-            List<CartItem> cartItems = customer.getCartItems();
-            if (cartItems == null) {
-                cartItems = new ArrayList<>();
-                customer.setCartItems(cartItems);
+            String productId = cartItem.getProductId();
+            String productUrl = "http://localhost:8070/product/getById/" + productId;
+            ResponseEntity<String> productResponse = restTemplate.getForEntity(productUrl, String.class);
+            if (productResponse.getStatusCode().is2xxSuccessful()) {
+                if (productResponse.getBody() == null) {
+                    return ResponseEntity.badRequest().body("Product not found with id: " + productId);
+                }
+                ObjectMapper objectMapper = new ObjectMapper();
+                Product productDetails = objectMapper.readValue(productResponse.getBody(), Product.class);
+                if(productDetails.getQuantity() < cartItem.getQuantity()){
+                    return ResponseEntity.badRequest().body("Product quantity is not enough");
+                }
+                List<CartItem> currentCartItems = customer.getCartItems();
+                if (currentCartItems == null) {
+                    currentCartItems = new ArrayList<>();
+                    customer.setCartItems(currentCartItems);
+                }
+                currentCartItems.add(cartItem);
+                customer.setTotalCost(customer.getTotalCost() + (productDetails.getUnitPrice() * cartItem.getQuantity()));
+                customerRepository.save(customer);
+                return ResponseEntity.ok("Cart item added successfully");
+            } else {
+                return ResponseEntity.badRequest().body("Error fetching product details");
             }
-            cartItems.add(cartItem);
-            customerRepository.save(customer);
-
-            return ResponseEntity.ok("Cart item added successfully");
         } catch (UserNotFoundException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
         }
     }
 
