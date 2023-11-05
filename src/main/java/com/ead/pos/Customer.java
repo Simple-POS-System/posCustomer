@@ -6,6 +6,7 @@ import lombok.Setter;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Getter
@@ -24,12 +25,16 @@ public class Customer {
     private List<CartItem> cartItems;
     private int totalCost;
     private OrderStatus orderStatus;
+    private List<String> activeOrders;
+
 
     public enum OrderStatus {
+        IN_QUEUE,
         PACKING,
         READY_TO_DISPATCH,
         SHIPPED,
-        DELIVERED
+        DELIVERED,
+        NOT_APPLICABLE
     }
 
     @Override

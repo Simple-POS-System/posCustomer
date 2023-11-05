@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
+@RequestMapping("/customer")
 public class CustomerController {
     @Autowired
     private CustomerService customerService;
@@ -39,7 +40,7 @@ public class CustomerController {
 
     @DeleteMapping("/deleteById/{userId}")
     public ResponseEntity<String> deleteCustomerById(@PathVariable String userId) {
-        return customerService.deteleCustomerById(userId);
+        return customerService.deleteCustomerById(userId);
     }
 
     @GetMapping("/getCart/{userId}")
@@ -61,10 +62,27 @@ public class CustomerController {
         }
     }
 
+    @PutMapping("/deleteCartItem/{userId}/{productId}")
+    public ResponseEntity<?> deleteCartItem(@PathVariable String userId,@PathVariable String productId){
+        return customerService.removeCartItem(userId,productId);
+    }
+
+
     @GetMapping("/getOrderStatus/{userId}")
     public ResponseEntity<?> getOrderStatus(@PathVariable String userId){
         return customerService.getOrderStatus(userId);
     }
+
+    @PostMapping("/setOrderStatus/{userId}/{orderStatus}")
+    public ResponseEntity<?> setOrderStatus(@PathVariable String userId,@PathVariable String orderStatus){
+        return customerService.setOrderStatus(userId,orderStatus);
+    }
+
+    @PostMapping("/placeOrder/{userId}")
+    public ResponseEntity<?> placeOrder(@PathVariable String userId){
+        return customerService.placeOrder(userId);
+    }
+
 
     @DeleteMapping("/deleteCart/{userId}")
     public ResponseEntity<?> deleteCart(@PathVariable String userId){
